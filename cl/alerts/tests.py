@@ -10,6 +10,8 @@ from timeout_decorator import timeout_decorator
 
 from cl.alerts.models import Alert, DocketAlert
 from cl.alerts.tasks import send_docket_alert, update_docket_and_send_alert
+from cl.recap.mergers import update_docket_metadata, \
+    add_bankruptcy_data_to_docket
 from cl.search.models import Docket, DocketEntry, RECAPDocument
 from cl.tests.base import BaseSeleniumTest, SELENIUM_TIMEOUT
 
@@ -146,7 +148,16 @@ class DocketAlertTest(TestCase):
         update_docket_and_send_alert(self.docket2.pk, self.new)
         # Do zero emails go out? None should.
         self.assertEqual(len(mail.outbox), 0)
+    def test_parse_iquery_data_correctly(self):
+        """ Do we correctly parse iquery data?"""
+        metadata={
+            "docket_number": "1:16-cv-00745-ESH",
+  "case_name": "NATIONAL VETERANS LEGAL SERVICES PROGRAM v. United States",
+            "date_filed": "2016-04-21"
 
+}
+        update_docket_metadata(self.docket2, metadata)
+        add_bankruptcy_data_to_docket(self.docket2, metadata)
     def test_nothing_happens_for_timers_after_de_creation(self):
         """Do we avoid sending alerts for timers after the de was created?"""
         send_docket_alert(self.docket.pk, self.after)
