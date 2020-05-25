@@ -8,8 +8,8 @@ import requests
 from dateutil import parser
 from django.db import transaction, IntegrityError
 from django.utils.timezone import now
-from juriscraper.pacer import PacerRssFeed
 
+from cl.alerts.models import DocketAlert
 from cl.alerts.tasks import enqueue_docket_alert
 from cl.celery import app
 from cl.lib.crypto import sha256
@@ -20,6 +20,9 @@ from cl.recap.mergers import (
     update_docket_metadata,
 )
 from cl.recap_rss.models import RssFeedStatus, RssItemCache
+from cl.scrapers.models import PACERMobilePageData
+from cl.search.models import Docket
+from juriscraper.pacer import PacerRssFeed
 
 logger = logging.getLogger(__name__)
 
@@ -182,6 +185,21 @@ def cache_hash(item_hash):
         return True
 
 
+def save_info_for_mobile_query(d_pk, docket_entries):
+    #TODO: create redis lock and retry if lock already exists
+    d = Docket.objects.filter(pk=d_pk)
+    if not DocketAlert.objects.filter(docket=d).exists():
+        return  # no alerts for this docket, don't bother
+    mobile_page = PACERMobilePageData.objects.get(docket=d)
+    count_last_rss_crawl = mobile_page.count_last_rss_crawl
+    date_last_mobile_crawl = mobile_page.date_last_mobile_crawl
+    for entry in docket_entries:
+        if entry["date_filed"] > date_last_mobile_crawl:
+            count_last_rss_crawl += 1
+    mobile_page.count_last_rss_crawl=count_last_rss_crawl
+    mobile_page.save()
+
+
 @app.task
 def merge_rss_feed_contents(feed_data, court_pk, feed_status_pk):
     """Merge the rss feed contents into CourtListener
@@ -230,6 +248,7 @@ def merge_rss_feed_contents(feed_data, court_pk, feed_status_pk):
             )
 
         if content_updated and docket_count > 0:
+            save_info_for_mobile_query.delay(d.pk, docket["docket_entries"])
             newly_enqueued = enqueue_docket_alert(d.pk)
             if newly_enqueued:
                 d_pks_to_alert.append((d.pk, start_time))
