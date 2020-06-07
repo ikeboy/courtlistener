@@ -2,6 +2,8 @@
 # Code for merging PACER content into the DB
 import logging
 import re
+
+import pytz
 from datetime import datetime, timedelta
 
 from django.core.exceptions import ValidationError
@@ -9,6 +11,8 @@ from django.core.files.base import ContentFile
 from django.db import IntegrityError, OperationalError, transaction
 from django.db.models import Prefetch, Q
 from django.utils.timezone import now
+
+from cl.recap.constants import COURT_TIMEZONES
 from juriscraper.lib.string_utils import CaseNameTweaker
 from juriscraper.pacer import AttachmentPage
 
@@ -587,10 +591,15 @@ def add_docket_entries(d, docket_entries, tags=None):
         date_filed = docket_entry["date_filed"]
         if isinstance(date_filed, datetime):
             # For now we do dumb date conversion. This simply returns a date
-            # object with the same year, month, and day, ignoring time and
-            # timezones. Once the DB is upgraded to support timezones, we can
-            # do better.
-            date_filed = date_filed.date()
+            # object with the same year, month, and day, ignoring time, although
+            # at least attempting to adjust for timezones. Once the DB is upgraded
+            # to support timezones, we can do better.
+            court_timezone = COURT_TIMEZONES.get(d.court_id, "US/Pacific")
+            date_filed = (
+                date_filed.replace(tzinfo=pytz.utc)
+                .astimezone(tz=pytz.timezone(court_timezone))
+                .date()
+            )
 
         de.date_filed = date_filed or de.date_filed
         de.pacer_sequence_number = (
