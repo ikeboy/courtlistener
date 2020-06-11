@@ -101,7 +101,8 @@ class BaseSeleniumTest(StaticLiveServerTestCase):
 
     @classmethod
     def tearDownClass(self):
-        self.browser.quit()
+        if self.browser:
+            self.browser.quit()
         self.browser = None
 
     def tearDown(self):
