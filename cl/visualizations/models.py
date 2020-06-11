@@ -106,7 +106,9 @@ class SCOTUSMap(models.Model):
     @property
     def json(self):
         """Returns the most recent version"""
-        return self.json_versions.all()[0].json_data
+        if self.json_versions.all():
+            return self.json_versions.all()[0].json_data
+        return None
 
     @property
     def referers_displayed(self):
