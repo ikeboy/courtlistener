@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test.utils import override_settings
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -46,6 +46,8 @@ class BaseSeleniumTest(StaticLiveServerTestCase):
     """
 
     host = "0.0.0.0"
+    browser = None
+    count=0
 
     @staticmethod
     def _create_browser():
@@ -61,12 +63,15 @@ class BaseSeleniumTest(StaticLiveServerTestCase):
             "--disable-features=AvoidFlashBetweenNavigation,PaintHolding"
         )
 
+        if BaseSeleniumTest.browser:
+            return BaseSeleniumTest.browser
         if settings.DOCKER_SELENIUM_HOST:
             capabilities = options.to_capabilities()
-            return webdriver.Remote(
+            BaseSeleniumTest.browser=webdriver.Remote(
                 settings.DOCKER_SELENIUM_HOST,
                 desired_capabilities=capabilities,
             )
+            return BaseSeleniumTest.browser
         return webdriver.Chrome(chrome_options=options)
 
     @classmethod
@@ -84,11 +89,12 @@ class BaseSeleniumTest(StaticLiveServerTestCase):
     def setUp(self):
         self.reset_browser()
         self._update_index()
+        self.count += 1
 
     def reset_browser(self):
         try:
-            self.browser.quit()
-        except AttributeError:
+            self.browser.delete_all_cookies()
+        except (AttributeError):
             # it's ok we forgive you http://stackoverflow.com/a/610923
             pass
         finally:
@@ -101,7 +107,10 @@ class BaseSeleniumTest(StaticLiveServerTestCase):
             filename = type(self).__name__ + "-selenium.png"
             print("\nSaving screenshot: %s" % (filename,))
             self.browser.save_screenshot("/tmp/" + filename)
-        self.browser.quit()
+        if self.count:
+            self.count -= 1
+        else:
+            self.browser.quit()
         self._teardown_test_solr()
 
     @retry(AssertionError, tries=3, delay=0.25, backoff=1)
