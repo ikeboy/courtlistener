@@ -88,7 +88,6 @@ class BaseSeleniumTest(StaticLiveServerTestCase):
     def setUp(self):
         self.reset_browser()
         self._update_index()
-        self.count += 1
 
     def reset_browser(self):
         try:
@@ -101,16 +100,15 @@ class BaseSeleniumTest(StaticLiveServerTestCase):
 
         self.browser.implicitly_wait(5)
 
+    def tearDownClass(self):
+        self.browser.quit()
+        self.browser = None
+
     def tearDown(self):
         if self.screenshot:
             filename = type(self).__name__ + "-selenium.png"
             print("\nSaving screenshot: %s" % (filename,))
             self.browser.save_screenshot("/tmp/" + filename)
-        if self.count:
-            self.count -= 1
-        else:
-            self.browser.quit()
-            self.browser=None
         self._teardown_test_solr()
 
     @retry(AssertionError, tries=3, delay=0.25, backoff=1)
