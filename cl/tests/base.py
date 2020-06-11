@@ -46,7 +46,6 @@ class BaseSeleniumTest(StaticLiveServerTestCase):
     """
 
     host = "0.0.0.0"
-    browser = None
 
     @staticmethod
     def _create_browser():
