@@ -99,6 +99,7 @@ class BaseSeleniumTest(StaticLiveServerTestCase):
 
         self.browser.implicitly_wait(5)
 
+    @classmethod
     def tearDownClass(self):
         self.browser.quit()
         self.browser = None
