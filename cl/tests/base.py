@@ -67,11 +67,10 @@ class BaseSeleniumTest(StaticLiveServerTestCase):
             return BaseSeleniumTest.browser
         if settings.DOCKER_SELENIUM_HOST:
             capabilities = options.to_capabilities()
-            BaseSeleniumTest.browser=webdriver.Remote(
+            return webdriver.Remote(
                 settings.DOCKER_SELENIUM_HOST,
                 desired_capabilities=capabilities,
             )
-            return BaseSeleniumTest.browser
         return webdriver.Chrome(chrome_options=options)
 
     @classmethod
