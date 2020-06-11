@@ -94,7 +94,7 @@ class BaseSeleniumTest(StaticLiveServerTestCase):
     def reset_browser(self):
         try:
             self.browser.delete_all_cookies()
-        except (AttributeError):
+        except (AttributeError, WebDriverException):
             # it's ok we forgive you http://stackoverflow.com/a/610923
             pass
         finally:
@@ -111,6 +111,7 @@ class BaseSeleniumTest(StaticLiveServerTestCase):
             self.count -= 1
         else:
             self.browser.quit()
+            self.browser=None
         self._teardown_test_solr()
 
     @retry(AssertionError, tries=3, delay=0.25, backoff=1)
