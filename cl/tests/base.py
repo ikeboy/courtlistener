@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test.utils import override_settings
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, WebDriverException
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -47,7 +47,6 @@ class BaseSeleniumTest(StaticLiveServerTestCase):
 
     host = "0.0.0.0"
     browser = None
-    count=0
 
     @staticmethod
     def _create_browser():
@@ -92,7 +91,7 @@ class BaseSeleniumTest(StaticLiveServerTestCase):
     def reset_browser(self):
         try:
             self.browser.delete_all_cookies()
-        except (AttributeError, WebDriverException):
+        except AttributeError:
             # it's ok we forgive you http://stackoverflow.com/a/610923
             pass
         finally:
